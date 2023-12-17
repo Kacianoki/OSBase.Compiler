@@ -1,9 +1,6 @@
-﻿using OSBase;
-using System.IO.Compression;
+﻿using System.IO.Compression;
 using System.Reflection;
 using System.Diagnostics;
-using System.IO.Enumeration;
-
 namespace OSBase.Compiler;
 public class Compiler
 {
@@ -47,7 +44,7 @@ public class Compiler
             Console.ReadKey();
             Environment.Exit(-2);
         }
-        int tasks = 17;
+        int tasks = 18;
         int task = 0;
         void TaskEnded()
         {
@@ -56,7 +53,20 @@ public class Compiler
         }
         Console.WriteLine("Compilation...");
         var CompiledOS = new CompiledOS();
-        CompiledOS.ConsoleOS = os.First().consoleOS;
+        CompiledOS.ConsoleOS = os.First().consoleOS.osinfo;
+        TaskEnded();
+        Type[] typess = os.First().Assembly.GetTypes();
+        List<Type> ConsoleOSs = (from p in typess where p.IsSubclassOf(typeof(ConsoleOS)) select p).ToList();
+        try
+        {
+            ConsoleOSs.First().GetMethod("Main", BindingFlags.Static | BindingFlags.Public);
+        }
+        catch
+        {
+            Console.WriteLine("ОС должна иметь статичный метод \"Main\" с модификатором доступа \"public\"");
+            Console.ReadKey();
+            Environment.Exit(-4);
+        }
         TaskEnded();
         var ReferencedAssemblies = os.First().Assembly.GetReferencedAssemblies();
         CompiledOS.DependentAssemblies = (from a in ReferencedAssemblies select new AssemblyInfo(a.Name, a.FullName, a.Version)).ToArray();
@@ -106,13 +116,13 @@ public class Compiler
         TaskEnded();
         Directory.CreateDirectory("Output");
         TaskEnded();
-        if (File.Exists(@$"Output\{CompiledOS.ConsoleOS.osinfo.Name}_{CompiledOS.ConsoleOS.osinfo.Type}.zip")) File.Delete(@$"Output\{CompiledOS.ConsoleOS.osinfo.Name}_{CompiledOS.ConsoleOS.osinfo.Type}.zip");
+        if (File.Exists(@$"Output\{CompiledOS.ConsoleOS.Name}_{CompiledOS.ConsoleOS.Type}.zip")) File.Delete(@$"Output\{CompiledOS.ConsoleOS.Name}_{CompiledOS.ConsoleOS.Type}.zip");
         TaskEnded();
-        ZipFile.CreateFromDirectory("Temp", @$"Output\{CompiledOS.ConsoleOS.osinfo.Name}_{CompiledOS.ConsoleOS.osinfo.Type}.zip", CompressionLevel.SmallestSize, false);
+        ZipFile.CreateFromDirectory("Temp", @$"Output\{CompiledOS.ConsoleOS.Name}_{CompiledOS.ConsoleOS.Type}.zip", CompressionLevel.SmallestSize, false);
         TaskEnded();
         Directory.Delete("Temp", true);
         TaskEnded();
-        ProcessStartInfo startInfo = new ProcessStartInfo(new FileInfo(@$"Output\{CompiledOS.ConsoleOS.osinfo.Name}_{CompiledOS.ConsoleOS.osinfo.Type}.zip").Directory.FullName);
+        ProcessStartInfo startInfo = new ProcessStartInfo(new FileInfo(@$"Output\{CompiledOS.ConsoleOS.Name}_{CompiledOS.ConsoleOS.Type}.zip").Directory.FullName);
         startInfo.UseShellExecute = true;
         Process.Start(startInfo);
         Environment.Exit(0);
@@ -120,7 +130,7 @@ public class Compiler
 }
 public class CompiledOS
 {
-    public ConsoleOS ConsoleOS;
+    public ConsoleOSInfo ConsoleOS;
     public string AssemblyFile;
     public AssemblyInfo[] DependentAssemblies;
     public string[] DependentFiles;
